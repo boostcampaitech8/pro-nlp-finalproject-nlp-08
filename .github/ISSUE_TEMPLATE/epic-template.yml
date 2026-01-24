@@ -1,0 +1,25 @@
+name: "Epic"
+title: "🗺️ epic: "
+description: "대규모 기능이나 프로젝트를 위한 템플릿입니다."
+labels: ["epic"]
+body:
+  - type: textarea
+    attributes:
+      label: 📄 Overview
+      description: Epic의 전체적인 목표와 범위를 설명해 주세요.
+      placeholder: |
+        이 Epic이 해결하려는 문제는 무엇인가요?
+        최종 목표는 무엇인가요?
+        어떤 가치를 제공하나요?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 🎯 Goals
+      description: 구체적인 목표들을 나열해 주세요.
+      placeholder: |
+        - [ ] 목표 1
+        - [ ] 목표 2
+        - [ ] 목표 3
+    validations:
+      required: true

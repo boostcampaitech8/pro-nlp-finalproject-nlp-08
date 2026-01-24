@@ -1,0 +1,84 @@
+name: "Refactor Proposal"
+title: "♻️ refactor: "
+description: "코드 구조 개선 및 리팩토링 제안을 위한 템플릿입니다."
+labels: ["refactor"]
+body:
+  - type: textarea
+    attributes:
+      label: 📄 Description
+      description: 리팩토링이 필요한 부분에 대해 설명해주세요.
+      placeholder: |
+        어떤 코드를 리팩토링하려고 하나요?
+        왜 이 리팩토링이 필요한가요?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ⚠️ Current Issues
+      description: 현재 코드의 문제점이나 개선이 필요한 이유를 구체적으로 작성해 주세요.
+      placeholder: |
+        - 중복 코드가 5개 파일에 걸쳐 존재
+        - 함수가 100줄 이상으로 너무 김
+        - 복잡도가 높아 이해하기 어려움
+        - 테스트가 어려운 구조
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 🎯 Goal & Benefits
+      description: 이 리팩토링을 통해 얻을 수 있는 이점을 구체적으로 적어주세요.
+      placeholder: |
+        - 함수 길이 단축을 통한 가독성 향상
+        - 중복 코드 제거로 유지보수성 개선
+        - 실행 속도 개선
+        - 테스트 커버리지 향상
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 📂 Target Scope
+      description: 리팩토링이 적용될 파일 경로, 디렉토리, 또는 모듈을 명시해 주세요.
+      placeholder: |
+        - src/components/UserProfile.tsx
+        - src/utils/validation.ts
+        - src/services/api/
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 🔧 Proposed Approach
+      description: 어떻게 리팩토링할 것인지 구체적인 방법을 작성해 주세요.
+      placeholder: |
+        - 큰 함수를 작은 함수들로 분리
+        - 공통 로직을 유틸리티 함수로 추출
+        - 디자인 패턴 적용 (예: Strategy, Factory 등)
+        - 타입 안정성 강화
+    validations:
+      required: false
+  - type: dropdown
+    attributes:
+      label: ⚡ Breaking Changes
+      description: 이 리팩토링이 기존 코드와의 호환성을 깨뜨리나요?
+      options:
+        - "No - 내부 구조만 변경 (API 변경 없음)"
+        - "Yes - API 또는 인터페이스 변경 필요"
+        - "Unknown - 추가 검토 필요"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ To Do
+      description: 리팩토링을 위한 세부 작업을 체크박스 형태로 작성해주세요.
+      placeholder: |
+        - [ ] 현재 코드 분석 및 테스트 작성
+        - [ ] 리팩토링 수행
+        - [ ] 기존 테스트 통과 확인
+        - [ ] 코드 리뷰
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 🔗 Related Issues
+      description: 관련된 이슈나 PR이 있다면 링크(#번호)를 남겨주세요.
+    validations:
+      required: false
