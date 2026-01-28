@@ -1,1 +1,5 @@
-# 메인 서치 로직 (임베딩 -> 벡터 비교 -> 결과 정렬)
+def search(self, query: str, root_path: str, extensions: Optional[List[str]] = None):
+    if extensions is None:
+    results = []
+    
+    return results
