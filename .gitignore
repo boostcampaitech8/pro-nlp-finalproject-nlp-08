@@ -4,4 +4,14 @@ __pycache__/
 *.pyc
 .python-version
 uv.lock
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.wsuo
+
+# Build
+bin/
+obj/
 outputs/
