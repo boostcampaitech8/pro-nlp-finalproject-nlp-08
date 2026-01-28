@@ -8,3 +8,21 @@ dependencies = [
     "fastapi>=0.128.0",
     "uvicorn[standard]>=0.40.0",
 ]
+
+[dependency-groups]
+dev = [
+    "black[jupyter]>=25.12.0",
+    "ipykernel>=6.29.5",
+]
+
+[tool.black]
+line-length = 79           # 한 줄 최대 길이
+target-version = ['py311'] # 프로젝트의 파이썬 버전
+include = '\.(py|pyi|ipynb)$'       # 포맷팅할 파일 확장자
+exclude = '''
+/(
+    \.git
+    | \.venv
+)/
+'''
+
