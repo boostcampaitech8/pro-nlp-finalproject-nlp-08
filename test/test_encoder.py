@@ -67,6 +67,14 @@ class TestSiglipEncoderUnit:
         assert len(result) == 1152
         assert all(isinstance(x, float) for x in result)
 
+    def test_create_emb_txt_query_returns_list(self, mock_encoder):
+        """create_emb_txt_query가 List[float]를 반환하는지 테스트"""
+        result = mock_encoder.create_emb_txt_query("A photo of a cat")
+
+        assert isinstance(result, list)
+        assert len(result) == 1152
+        assert all(isinstance(x, float) for x in result)
+
     def test_create_emb_list_with_mixed_files(
         self, mock_encoder, temp_image_file, temp_text_file
     ):
@@ -108,6 +116,7 @@ class TestSiglipEncoderUnit:
         assert ".md" in SiglipEncoder.TEXT_EXTENSIONS
         assert ".json" in SiglipEncoder.TEXT_EXTENSIONS
         assert ".csv" in SiglipEncoder.TEXT_EXTENSIONS
+
 
 @pytest.mark.integration
 class TestSiglipEncoderIntegration:
@@ -151,11 +160,22 @@ class TestSiglipEncoderIntegration:
         assert isinstance(result, list)
         assert len(result) == 1152
 
-    def test_real_embedding_list(self, encoder, temp_image_file, temp_text_file):
+    def test_real_text_query_embedding(self, encoder):
+        """실제 모델로 텍스트 쿼리 임베딩 테스트"""
+        result = encoder.create_emb_txt_query(
+            "A photo of a cat sitting on a couch."
+        )
+
+        assert isinstance(result, list)
+        assert len(result) == 1152
+
+    def test_real_embedding_list(
+        self, encoder, temp_image_file, temp_text_file
+    ):
         """실제 모델로 리스트 임베딩 테스트"""
         files = [temp_image_file, temp_text_file]
         results = encoder.create_emb_list(files)
-        
+
         assert len(results) == 2
         assert all(len(emb) == 1152 for emb in results)
 

@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Tuple
 import os
 
 import torch
-from PIL import Image
+from PIL import Image, ImageOps
 from transformers import AutoModel, AutoProcessor
 
 
@@ -28,10 +28,13 @@ class SiglipEncoder:
         if self.model_name in self._cache:
             return self._cache[self.model_name]
 
-        model = AutoModel.from_pretrained(
-            self.model_name,
-            cache_dir=self.cache_dir,
-        ).to(self.device)
+        model = (
+            AutoModel.from_pretrained(
+                self.model_name, cache_dir=self.cache_dir
+            )
+            .to(self.device)
+            .eval()
+        )
 
         processor = AutoProcessor.from_pretrained(
             self.model_name,
@@ -48,15 +51,39 @@ class SiglipEncoder:
             image_path: 이미지 절대 경로
 
         Returns:
-            임베딩 벡터 (List[float])
+            임베딩 벡터
         """
         image = Image.open(image_path).convert("RGB")
-        inputs = self.processor(images=image, return_tensors="pt").to(self.device)
+        image = ImageOps.exif_transpose(image)
+        inputs = self.processor(
+            images=[image], return_tensors="pt", padding="max_length"
+        ).to(self.device)
 
         with torch.no_grad():
-            image_features = self.model.get_image_features(**inputs)
+            outputs = self.model.get_image_features(**inputs)
 
-        embedding = image_features.pooler_output.squeeze().cpu().tolist()
+        image_emb = outputs.pooler_output
+        embedding = image_emb.squeeze().cpu().tolist()
+        return embedding
+
+    def create_emb_txt_query(self, text: str) -> List[float]:
+        """텍스트 쿼리를 읽어 임베팅 벡터를 반환합니다.
+
+        Args:
+            text: 텍스트 쿼리
+
+        Returns:
+            임베딩 벡터
+        """
+        inputs = self.processor(
+            text=[text], return_tensors="pt", padding="max_length"
+        ).to(self.device)
+
+        with torch.no_grad():
+            outputs = self.model.get_text_features(**inputs)
+
+        text_emb = outputs.pooler_output
+        embedding = text_emb.squeeze().cpu().tolist()
         return embedding
 
     def create_emb_txt(self, text_path: str) -> List[float]:
@@ -66,19 +93,20 @@ class SiglipEncoder:
             text_path: 텍스트 절대 경로
 
         Returns:
-            임베딩 벡터 (List[float])
+            임베딩 벡터
         """
         with open(text_path, "r", encoding="utf-8") as f:
             text = f.read()
 
-        inputs = self.processor(text=text, return_tensors="pt", padding=True).to(
-            self.device
-        )
+        inputs = self.processor(
+            text=[text], return_tensors="pt", padding="max_length"
+        ).to(self.device)
 
         with torch.no_grad():
-            text_features = self.model.get_text_features(**inputs)
+            outputs = self.model.get_text_features(**inputs)
 
-        embedding = text_features.pooler_output.squeeze().cpu().tolist()
+        text_emb = outputs.pooler_output
+        embedding = text_emb.squeeze().cpu().tolist()
         return embedding
 
     def create_emb_list(self, files_path: List[str]) -> List[List[float]]:
@@ -88,8 +116,7 @@ class SiglipEncoder:
             files_path: 절대 경로 파일 리스트
 
         Returns:
-            임베딩된 결과값들 (List[List[float]])
-            e.g. [[-1,1,-1.3, 1.2], [-1.5,2.7, -2.8]]
+            임베딩된 결과값들
         """
         embedding_results: List[List[float]] = []
 
