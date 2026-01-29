@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional, Set, Dict, Any
-from app.services.mock_search_engine import search as search_service
+# from app.services.mock_search_engine import search as search_service
+from app.services.search_engine import search as search_service
 
 router = APIRouter()
 
@@ -17,7 +18,7 @@ class SearchRequest(BaseModel):
     """
 
     query: str = Field(..., description="검색 질의 문자열")
-    root_path: str = Field(..., description="검색 대상 루트 경로")
+    target_path: str = Field(..., description="검색 대상 루트 경로")
     extensions: Optional[List[str]] = Field(
         default=None,
         description="검색 대상 확장자 목록(점 포함/미포함 모두 허용). 미입력 시 서버 모든 허용 확장자 사용",
@@ -77,13 +78,13 @@ def _resolve_target_extensions(
 
 def get_search_request(
     query: str = Query(...),
-    root_path: str = Query(...),
+    target_path: str = Query(...),
     extensions: Optional[List[str]] = Query(None),
 ) -> SearchRequest:
     """
     쿼리 파라미터를 `SearchRequest`로 변환합니다.
     """
-    return SearchRequest(query=query, root_path=root_path, extensions=extensions)
+    return SearchRequest(query=query, target_path=target_path, extensions=extensions)
 
 
 @router.get("/search")
@@ -109,6 +110,9 @@ def search(
 
     search_args = params.dict()
     search_args["extensions"] = target_exts
+    search_args["top_k"] = getattr(config["search"], "top_k", 10)
+    search_args["cache_path"] = getattr(config, "cache_path", "data/embeddings.pkl")
+    print(search_args)
 
     results = search_service(**search_args)
     return {"status": "success", "results": results}

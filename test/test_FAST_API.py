@@ -13,8 +13,8 @@ def test_search_api(cfg: DictConfig):
 
     # Test case 1: Valid search request
     params = {
-        "query": "cat",
-        "root_path": TEST_DIR,
+        "query": "bird",
+        "target_path": TEST_DIR,
         "extensions": ["txt", "jpg"]
     }
     response = requests.get(f"{base_url}/search", params=params)
@@ -27,7 +27,7 @@ def test_search_api(cfg: DictConfig):
     # Test case 2: Invalid extension
     params = {
         "query": "cat",
-        "root_path": TEST_DIR,
+        "target_path": TEST_DIR,
         "extensions": ["exe"]
     }
     response = requests.get(f"{base_url}/search", params=params)
@@ -39,7 +39,7 @@ def test_search_api(cfg: DictConfig):
     # Test case 3: No extensions provided (should use all allowed)
     params = {
         "query": "cat",
-        "root_path": TEST_DIR
+        "target_path": TEST_DIR
     }
     response = requests.get(f"{base_url}/search", params=params)
     assert response.status_code == 200

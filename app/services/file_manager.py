@@ -33,7 +33,7 @@ class FileManager:
             
         return file_paths
         
-    def get_file_mtime(self, file_path: str) -> Dict[str, float]:
+    def get_file_mtime(self, file_path: str) -> float:
         '''
         파일 경로에 대한 수정 시간을 반환함.
             
@@ -41,11 +41,11 @@ class FileManager:
             file_path (str): 파일 경로
             
         Returns:
-            Dict[str, float]: 파일이 저장된 시간 반환
+            float: 파일이 저장된 시간 반환
         '''
         stat =  Path(file_path).stat()
         mtime = stat.st_mtime
-        return {'mtime': mtime}
+        return mtime
         
     def sync_and_filter(self) -> List[str]:
         '''
@@ -71,13 +71,15 @@ class FileManager:
             # 수정된 파일
             else:
                 db_mtime = self.db.get_mtime_cache(file_path)
-                if local_mtime['mtime'] != db_mtime:
+                if local_mtime != db_mtime:
+                    print(f"File modified: {file_path} check mtime {local_mtime}  vs {type(db_mtime)} {db_mtime}")
                     need_embed_files.append(file_path)
                     self.db.delete_cache(file_path)
                     
         # DB에서 삭제된 파일 제거
-        for db_file in db_files:
-                if db_file not in local_files:
-                    self.db.delete_cache(db_file)
-                    
+        delete_cache_list = set(db_files) - set(local_files)
+        if delete_cache_list:
+            for db_file in delete_cache_list:
+                self.db.delete_cache(db_file)
+                
         return need_embed_files

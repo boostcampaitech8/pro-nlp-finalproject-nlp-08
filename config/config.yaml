@@ -1,4 +1,5 @@
 default:
+  cache_path: data/embeddings.pkl
   allowed_extensions:
     - .txt
     - .jpg
@@ -6,4 +7,4 @@ default:
     top_k: 10
   server:
     host: 127.0.0.1
-    port: 8080
+    port: 8081
