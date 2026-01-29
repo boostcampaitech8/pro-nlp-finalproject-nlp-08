@@ -2,6 +2,8 @@ default:
   allowed_extensions:
     - .txt
     - .jpg
+  search:
+    top_k: 10
   server:
     host: 127.0.0.1
     port: 8080
