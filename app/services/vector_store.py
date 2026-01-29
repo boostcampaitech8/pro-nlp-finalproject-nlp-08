@@ -1,5 +1,6 @@
 # 캐시 조회 저장 삭제 업데이트
 import pickle
+import numpy as np
 
 
 class VectorStore:
@@ -9,16 +10,17 @@ class VectorStore:
 
     Args:
         db_path (str): 캐시 데이터가 저장된 pickle 파일 경로
-    
+
     Returns:
         None
     """
+
     def __init__(self, db_path):
         self.db_path = db_path
-        self.data={}
+        self.data = {}
 
         try:
-            with open(self.db_path, 'rb') as f:
+            with open(self.db_path, "rb") as f:
                 self.data = pickle.load(f)
         except EOFError:
             pass
@@ -46,7 +48,7 @@ class VectorStore:
             List[str]: 모든 데이터의 key List
         """
         return self.data.keys()
-    
+
     def get_values_cache(self):
         """
         데이터베이스의 모든 value를 반환
@@ -58,7 +60,7 @@ class VectorStore:
             List[List[Float, List[Float]]]: 모든 데이터의 value List
         """
         return self.data.values()
-    
+
     def delete_cache(self, del_key):
         """
         데이터베이스의 특정 key에 해당하는 데이터 삭제
@@ -71,7 +73,7 @@ class VectorStore:
         """
         if del_key in self.data:
             del self.data[del_key]
-    
+
     def create_cache(self, create_key, mtime, create_embed):
         """
         데이터베이스의 데이터 추가
@@ -85,7 +87,7 @@ class VectorStore:
             None
         """
         self.data[create_key] = [mtime, create_embed]
-    
+
     def save_cache(self):
         """
         데이터베이스 변경 사항을 기존 저장 공간에 덮어씌워 저장
@@ -98,3 +100,31 @@ class VectorStore:
         """
         with open(self.db_path, "wb") as f:
             pickle.dump(self.data, f)
+
+    def search(self, query_path, query_embed, topk=5):
+        """
+        코사인 유사도를 통해 쿼리와 유사한 절대경로를 topk개 반환
+
+        Args:
+            query_path (str): 찾고 싶은 디렉토리의 상위 절대 주소
+            query_embed (List[Float]): 자연어 쿼리 임베딩
+            topk (int): 반환할 유사도 상위 개수
+
+        Returns:
+            List[str]: 유사도 상위 topk개의 절대경로
+        """
+        keys = [
+            key
+            for key in list(self.get_keys_cache())
+            if key[: len(query_path)] == query_path
+        ]
+        similarity = [
+            np.matmul(self.data[key][1], query_embed) for key in keys
+        ]
+        topk_indices = np.argsort(similarity)[::-1][:topk]
+
+        search_result = []
+        for i in topk_indices:
+            search_result.append(keys[i])
+
+        return search_result
