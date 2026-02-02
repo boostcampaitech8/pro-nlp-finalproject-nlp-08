@@ -1,10 +1,14 @@
 default:
   cache_path: data/embeddings.pkl
   allowed_extensions:
-    - .txt
-    - .jpg
+    text:
+      - .txt
+    image:
+      - .jpg
   search:
     top_k: 10
   server:
     host: 127.0.0.1
     port: 8081
+  model:
+    name: google/siglip2-so400m-patch16-naflex

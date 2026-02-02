@@ -1,24 +1,19 @@
 from typing import Dict, List, Optional, Tuple
 import os
-
+from omegaconf import DictConfig
 import torch
 from PIL import Image, ImageOps
 from transformers import AutoModel, AutoProcessor
 
 
 class SiglipEncoder:
-    IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
-    TEXT_EXTENSIONS = {".txt", ".md", ".json", ".csv"}
     _cache: Dict[str, Tuple[AutoModel, AutoProcessor]] = {}
 
-    def __init__(
-        self,
-        model_name: str = "google/siglip2-so400m-patch16-naflex",
-        cache_dir: Optional[str] = None,
-    ):
+    def __init__(self, cfg: DictConfig):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model_name = model_name
-        self.cache_dir = cache_dir or os.path.join(
+        self.cfg = cfg
+        self.model_name = self.cfg.model.name
+        self.cache_dir = os.path.join(
             os.path.expanduser("~"), ".cache", "huggingface", "hub"
         )
         self.model, self.processor = self._load_model()
@@ -123,9 +118,9 @@ class SiglipEncoder:
         for file_path in files_path:
             ext = os.path.splitext(file_path)[1].lower()
 
-            if ext in self.IMAGE_EXTENSIONS:
+            if ext in self.cfg.allowed_extensions.image:
                 embedding = self.create_emb_img(file_path)
-            elif ext in self.TEXT_EXTENSIONS:
+            elif ext in self.cfg.allowed_extensions.text:
                 embedding = self.create_emb_txt(file_path)
             else:
                 continue

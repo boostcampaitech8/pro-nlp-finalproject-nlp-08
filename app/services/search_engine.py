@@ -1,6 +1,7 @@
 import os
 import pathlib
 from typing import List, Dict, Any
+from omegaconf import DictConfig
 
 from app.services.file_manager import FileManager
 from app.services.vector_store import VectorStore
@@ -8,7 +9,12 @@ from app.services.encoder import SiglipEncoder
 
 
 def search(
-    query: str, target_path: str, extensions: List[str], top_k: int, cache_path: str
+    query: str,
+    target_path: str,
+    extensions: List[str],
+    top_k: int,
+    cache_path: str,
+    cfg: DictConfig,
 ) -> List[Dict[str, Any]]:
     """
     주어진 질의어와 경로, 확장자 목록을 바탕으로 검색을 수행합니다.
@@ -18,16 +24,17 @@ def search(
         extensions (List[str]): 검색 대상 확장자 목록
         top_k (int): 상위 k개 결과 반환
         cache_path (str): 캐시 파일 경로
+        cfg (DictConfig): 설정 객체
     Returns:
         List[Dict[str, Any]]: 검색 결과 목록
     """
     ROOT_DIR = str(pathlib.Path(__file__).parent.parent.parent)
     cache_full_path = os.path.join(ROOT_DIR, cache_path)
     vector_store = VectorStore(cache_full_path)
-    encoder = SiglipEncoder()
+    encoder = SiglipEncoder(cfg)
     file_manager = FileManager(vector_store, target_path)
 
-    need_embed_files = file_manager.sync_and_filter()
+    need_embed_files = file_manager.sync_and_filter(extensions)
     print(f"Files need embedding: {need_embed_files}")
     if need_embed_files:
         embeded_vector_list = encoder.create_emb_list(need_embed_files)
