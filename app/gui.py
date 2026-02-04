@@ -14,56 +14,83 @@ class SearchApp:
         self.root = root
         self.cfg = cfg
         self.root.title("파일 검색")
-        self.root.geometry("850x530")
+        self.root.geometry("1000x700")
+        self.root.resizable(True, True)
         self.root.configure(bg="#f0f0f0")
 
         # 파일 경로 입력 영역
         self.file_path_entry = tk.Entry(root)
-        self.file_path_entry.place(x=20, y=70, width=620, height=30)
+        self.file_path_entry.place(x=10, y=10, width=650, height=28)
 
         self.browse_button = tk.Button(
             root, text="파일찾기", command=self.browse_file
         )
-        self.browse_button.place(x=680, y=65, width=100, height=40)
+        self.browse_button.place(x=670, y=8, width=100, height=32)
 
         # 검색어 입력 영역
         self.search_entry = tk.Entry(root)
-        self.search_entry.place(x=20, y=150, width=620, height=30)
+        self.search_entry.place(x=10, y=50, width=650, height=28)
 
         self.search_button = tk.Button(root, text="검색", command=self.search)
-        self.search_button.place(x=680, y=145, width=100, height=40)
+        self.search_button.place(x=670, y=48, width=100, height=32)
 
-        # 체크박스 프레임 - config에서 동적으로 생성
-        self.extension_list = []
-        for exts in self.cfg.allowed_extensions:
-            for ext in self.cfg.allowed_extensions[exts]:
-                self.extension_list.append(ext)
-
-        self.checkbox_frame = tk.Frame(root, bg="white", relief="solid", bd=1)
-        checkbox_height = len(self.extension_list) * 25 + 10
-        self.checkbox_frame.place(
-            x=680, y=210, width=100, height=checkbox_height
-        )
-
-        # config의 allowed_extensions에서 체크박스 동적 생성
+        # 타입별로 그룹핑된 체크박스 프레임 생성 (좌측)
         self.ext_vars = {}
-        for ext in self.extension_list:
-            var = tk.BooleanVar()
-            self.ext_vars[ext] = var
-            checkbox = tk.Checkbutton(
-                self.checkbox_frame,
-                text=ext,
-                variable=var,
+        self.type_vars = {}  # 타입별 체크박스 변수
+        self.type_ext_map = {}  # 타입별 확장자 매핑
+
+        self.checkbox_outer_frame = tk.Frame(
+            root, bg="white", relief="solid", bd=1
+        )
+        self.checkbox_outer_frame.place(x=10, y=95, width=200, height=600)
+
+        allowed_map = (
+            OmegaConf.to_container(self.cfg.allowed_extensions, resolve=True)
+            or {}
+        )
+        y_offset = 0
+        for type_name, ext_list in allowed_map.items():
+            type_name_str = str(type_name)
+            self.type_ext_map[type_name_str] = ext_list
+
+            # 타입별 체크박스
+            type_var = tk.BooleanVar()
+            self.type_vars[type_name_str] = type_var
+            type_checkbox = tk.Checkbutton(
+                self.checkbox_outer_frame,
+                text=type_name_str,
+                variable=type_var,
                 bg="white",
                 anchor="w",
+                font=("Arial", 10, "bold"),
+                command=lambda t=type_name_str: self._toggle_type(t),
             )
-            checkbox.pack(fill="x", padx=5)
+            type_checkbox.place(x=5, y=y_offset)
+            y_offset += 22
+
+            # 확장자별 체크박스
+            for ext in ext_list:
+                var = tk.BooleanVar()
+                self.ext_vars[ext] = (var, type_name_str)
+                cb = tk.Checkbutton(
+                    self.checkbox_outer_frame,
+                    text=ext,
+                    variable=var,
+                    bg="white",
+                    anchor="w",
+                    command=lambda t=type_name_str: self._update_type_checkbox(
+                        t
+                    ),
+                )
+                cb.place(x=25, y=y_offset)
+                y_offset += 20
+            y_offset += 5  # 타입별 간격
 
         # 결과 표시 영역
         self.result_text = tk.Text(
             root, wrap=tk.WORD, relief="solid", bd=1, cursor="arrow"
         )
-        self.result_text.place(x=20, y=300, width=760, height=200)
+        self.result_text.place(x=220, y=95, width=770, height=600)
 
         # 링크 스타일 태그 설정
         self.result_text.tag_configure(
@@ -88,6 +115,27 @@ class SearchApp:
             self.file_path_entry.delete(0, tk.END)
             self.file_path_entry.insert(0, file_path)
 
+    def _toggle_type(self, type_name: str):
+        """타입의 (전체) 체크박스를 클릭했을 때 해당 타입의 모든 확장자 토글"""
+        is_checked = self.type_vars[type_name].get()
+        for ext, (var, t) in self.ext_vars.items():
+            if t == type_name:
+                var.set(is_checked)
+
+    def _update_type_checkbox(self, type_name: str):
+        """확장자 체크박스가 변경되었을 때 타입의 (전체) 체크박스 상태 업데이트"""
+        ext_list = self.type_ext_map.get(type_name, [])
+        checked_count = 0
+        for ext, (var, t) in self.ext_vars.items():
+            if t == type_name and var.get():
+                checked_count += 1
+
+        # 모두 체크되면 (전체) 활성화, 모두 미체크되면 비활성화
+        if checked_count == len(ext_list):
+            self.type_vars[type_name].set(True)
+        else:
+            self.type_vars[type_name].set(False)
+
     def search(self):
         """검색 실행"""
         file_path = self.file_path_entry.get()
@@ -105,10 +153,32 @@ class SearchApp:
             return
 
         # 선택된 확장자 목록 생성
-        extensions = [ext for ext, var in self.ext_vars.items() if var.get()]
+        extensions = [
+            ext for ext, (var, _) in self.ext_vars.items() if var.get()
+        ]
         if not extensions:
             messagebox.showwarning(
                 "경고", "최소 하나의 파일 형식을 선택해주세요."
+            )
+            return
+
+        # search_engine이 기대하는 타입별 확장자 맵으로 변환
+        allowed_map = (
+            OmegaConf.to_container(self.cfg.allowed_extensions, resolve=True)
+            or {}
+        )
+        target_extensions_map = {}
+        selected_set = {str(e).lower() for e in extensions}
+        if isinstance(allowed_map, dict):
+            for type_, exts in allowed_map.items():
+                exts_list = [str(e).lower() for e in (exts or [])]
+                picked = [e for e in exts_list if e in selected_set]
+                if picked:
+                    target_extensions_map[str(type_)] = picked
+
+        if not target_extensions_map:
+            messagebox.showwarning(
+                "경고", "선택한 확장자가 config.allowed_extensions에 없습니다."
             )
             return
 
@@ -120,85 +190,68 @@ class SearchApp:
         # 백그라운드에서 검색 실행
         thread = threading.Thread(
             target=self._run_search,
-            args=(search_query, file_path, extensions),
+            args=(search_query, file_path, target_extensions_map, extensions),
         )
         thread.start()
 
-    def _run_search(self, query, target_path, extensions):
+    def _run_search(
+        self, query, target_dir, target_extensions_map, selected_extensions
+    ):
         """백그라운드에서 검색 실행"""
         try:
             results = search(
-                query=query,
-                target_path=target_path,
-                extensions=extensions,
-                top_k=self.cfg.search.top_k,
-                cache_path=self.cfg.cache_path,
-                cfg=self.cfg,
+                query, target_dir, target_extensions_map, self.cfg
             )
             # UI 업데이트는 메인 스레드에서 실행
             self.root.after(
                 0,
                 lambda: self._display_results(
-                    results, target_path, query, extensions
+                    results, target_dir, query, selected_extensions
                 ),
             )
         except Exception as e:
             self.root.after(0, lambda: self._display_error(str(e)))
 
-    def _display_results(self, results, target_path, query, extensions):
+    def _display_results(self, results, target_dir, query, target_extensions):
         """검색 결과 표시"""
         self.result_text.delete(1.0, tk.END)
         self.search_button.config(state="normal")
 
-        header = f"검색 경로: {target_path}\n"
+        header = f"검색 경로: {target_dir}\n"
         header += f"검색어: {query}\n"
-        header += f"파일 형식: {' '.join(extensions)}\n"
+        header += f"파일 형식: {' '.join(target_extensions)}\n"
         self.result_text.insert(tk.END, header)
 
         if not results:
             self.result_text.insert(tk.END, "\n검색 결과가 없습니다.\n")
             return
 
-        # 결과를 텍스트와 이미지로 분류
-        text_results = [
-            f
-            for f in results
-            if f.lower().endswith(
-                tuple(OmegaConf.to_container(self.cfg.allowed_extensions.text))
+        # search_engine 반환: Dict[str, List[Tuple[path, score]]]
+        if not isinstance(results, dict):
+            self.result_text.insert(
+                tk.END,
+                "\n(경고) 검색 결과 형식이 예상과 다릅니다.\n",
             )
-        ]
-        image_results = [
-            f
-            for f in results
-            if f.lower().endswith(
-                tuple(
-                    OmegaConf.to_container(self.cfg.allowed_extensions.image)
-                )
-            )
-        ]
+            self.result_text.insert(tk.END, str(results))
+            return
 
         link_index = 0
-
-        # 텍스트 결과 표시
-        if text_results:
-            self.result_text.insert(
-                tk.END, f"\n{'='*50}\n[텍스트 파일]\n{'='*50}\n\n"
+        for type_, items in results.items():
+            if not items:
+                continue
+            title = (
+                "텍스트 파일"
+                if str(type_) == "text"
+                else "이미지 파일" if str(type_) == "image" else str(type_)
             )
-            for i, file_path in enumerate(text_results, 1):
+            self.result_text.insert(
+                tk.END, f"\n{'='*50}\n[{title}]\n{'='*50}\n\n"
+            )
+
+            for i, (file_path, score) in enumerate(items, 1):
                 self.result_text.insert(tk.END, f"{i}. ")
                 self._insert_file_link(file_path, link_index)
-                self.result_text.insert(tk.END, "\n")
-                link_index += 1
-
-        # 이미지 결과 표시
-        if image_results:
-            self.result_text.insert(
-                tk.END, f"\n{'='*50}\n[이미지 파일]\n{'='*50}\n\n"
-            )
-            for i, file_path in enumerate(image_results, 1):
-                self.result_text.insert(tk.END, f"{i}. ")
-                self._insert_file_link(file_path, link_index)
-                self.result_text.insert(tk.END, "\n")
+                self.result_text.insert(tk.END, f"  (score: {score:.4f})\n")
                 link_index += 1
 
     def _insert_file_link(self, file_path, index):

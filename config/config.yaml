@@ -1,12 +1,16 @@
 default:
   cache_path: data/embeddings.pkl
   allowed_extensions:
-    text:
-      - .txt
     image:
       - .jpg
+      - .jpeg
+      - .png
+    text:
+      - .txt
+      - .md
   search:
     top_k: 10
+  db_path: data/
   server:
     host: 127.0.0.1
     port: 8081

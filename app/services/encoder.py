@@ -1,22 +1,29 @@
 from typing import Dict, List, Optional, Tuple
 import os
-from omegaconf import DictConfig
 import torch
 from PIL import Image, ImageOps
 from transformers import AutoModel, AutoProcessor
+from collections import defaultdict
+from tqdm import tqdm
 
 
 class SiglipEncoder:
     _cache: Dict[str, Tuple[AutoModel, AutoProcessor]] = {}
 
-    def __init__(self, cfg: DictConfig):
+    def __init__(
+        self,
+        model_name: Optional[str] = "google/siglip2-so400m-patch16-naflex",
+    ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.cfg = cfg
-        self.model_name = self.cfg.model.name
+        self.model_name = model_name
         self.cache_dir = os.path.join(
             os.path.expanduser("~"), ".cache", "huggingface", "hub"
         )
         self.model, self.processor = self._load_model()
+        self.type_func_map = {
+            "image": self.create_emb_img,
+            "text": self.create_emb_txt,
+        }
 
     def _load_model(self) -> Tuple[AutoModel, AutoProcessor]:
         """모델을 캐시에서 로드하거나 새로 로드하여 캐시에 저장합니다."""
@@ -104,7 +111,9 @@ class SiglipEncoder:
         embedding = text_emb.squeeze().cpu().tolist()
         return embedding
 
-    def create_emb_list(self, files_path: List[str]) -> List[List[float]]:
+    def create_emb_list(
+        self, files_path: Dict[str, List[str]]
+    ) -> Dict[str, List[List[float]]]:
         """입력으로 받은 모든 경로의 파일들의 임베딩을 반환합니다.
 
         Args:
@@ -113,18 +122,14 @@ class SiglipEncoder:
         Returns:
             임베딩된 결과값들
         """
-        embedding_results: List[List[float]] = []
+        embedding_results = defaultdict(list)
 
-        for file_path in files_path:
-            ext = os.path.splitext(file_path)[1].lower()
-
-            if ext in self.cfg.allowed_extensions.image:
-                embedding = self.create_emb_img(file_path)
-            elif ext in self.cfg.allowed_extensions.text:
-                embedding = self.create_emb_txt(file_path)
-            else:
+        for type_, files in files_path.items():
+            func = self.type_func_map.get(type_)
+            if func is None:
                 continue
+            for file_path in tqdm(files, desc=f"Embedding {type_} files"):
+                embedding = func(file_path)
+                embedding_results[type_].append(embedding)
 
-            embedding_results.append(embedding)
-
-        return embedding_results
+        return dict(embedding_results)

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional, Set, Dict, Any
+
 # from app.services.mock_search_engine import search as search_service
 from app.services.search_engine import search as search_service
 
@@ -59,7 +60,11 @@ def _resolve_target_extensions(
         HTTPException: 허용되지 않은 확장자가 포함된 경우(400)
     """
     if requested_extensions:
-        target_exts = {_normalize_ext(ext) for ext in requested_extensions if ext is not None}
+        target_exts = {
+            _normalize_ext(ext)
+            for ext in requested_extensions
+            if ext is not None
+        }
     else:
         target_exts = set(allowed_extensions)
 
@@ -84,7 +89,9 @@ def get_search_request(
     """
     쿼리 파라미터를 `SearchRequest`로 변환합니다.
     """
-    return SearchRequest(query=query, target_path=target_path, extensions=extensions)
+    return SearchRequest(
+        query=query, target_path=target_path, extensions=extensions
+    )
 
 
 @router.get("/search")
@@ -103,15 +110,21 @@ def search(
         Dict[str, Any]: 검색 결과 응답
     """
     config = request.app.state.config
-    allowed_extensions = {_normalize_ext(e) for e in getattr(config, "allowed_extensions", [])}
+    allowed_extensions = {
+        _normalize_ext(e) for e in getattr(config, "allowed_extensions", [])
+    }
     allowed_extensions.discard("")
 
-    target_exts = _resolve_target_extensions(params.extensions, allowed_extensions)
+    target_exts = _resolve_target_extensions(
+        params.extensions, allowed_extensions
+    )
 
     search_args = params.dict()
     search_args["extensions"] = target_exts
     search_args["top_k"] = getattr(config["search"], "top_k", 10)
-    search_args["cache_path"] = getattr(config, "cache_path", "data/embeddings.pkl")
+    search_args["cache_path"] = getattr(
+        config, "cache_path", "data/embeddings.pkl"
+    )
     print(search_args)
 
     results = search_service(**search_args)
