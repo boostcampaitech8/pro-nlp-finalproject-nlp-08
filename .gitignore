@@ -14,5 +14,6 @@ uv.lock
 bin/
 obj/
 outputs/
-
+build/
+dist/
 data/

@@ -12,5 +12,6 @@
         { "emoji": "📝 docs: ", "entity": "memo", "code": ":memo:", "description": "문서 수정" },
         { "emoji": "📈 exp: ", "entity": "chart_with_upwards_trend", "code": ":chart_with_upwards_trend:", "description": "실험 및 성능평가" }
     ],
-    "gitmoji.onlyUseCustomEmoji": true
+    "gitmoji.onlyUseCustomEmoji": true,
+    "python-envs.pythonProjects": []
 }

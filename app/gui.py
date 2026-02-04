@@ -2,11 +2,22 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import threading
 import os
+import sys
 
 import hydra
+from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
 
 from app.services.search_engine import search
+
+
+def get_config_dir():
+    """PyInstaller 환경과 일반 환경 모두에서 config 디렉토리 경로 반환"""
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, "config")
 
 
 class SearchApp:
@@ -210,7 +221,8 @@ class SearchApp:
                 ),
             )
         except Exception as e:
-            self.root.after(0, lambda: self._display_error(str(e)))
+            error_msg = str(e)
+            self.root.after(0, lambda: self._display_error(error_msg))
 
     def _display_results(self, results, target_dir, query, target_extensions):
         """검색 결과 표시"""
@@ -294,12 +306,16 @@ class SearchApp:
         )
 
 
-@hydra.main(version_base=None, config_path="../config", config_name="config")
-def main(cfg: DictConfig) -> None:
-    root = tk.Tk()
-    cfg = cfg.default
-    app = SearchApp(root, cfg)
-    root.mainloop()
+def main() -> None:
+    config_dir = get_config_dir()
+
+    with initialize_config_dir(version_base=None, config_dir=config_dir):
+        cfg = compose(config_name="config")
+        cfg = cfg.default
+
+        root = tk.Tk()
+        app = SearchApp(root, cfg)
+        root.mainloop()
 
 
 if __name__ == "__main__":
