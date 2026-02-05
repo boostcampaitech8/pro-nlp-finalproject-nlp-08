@@ -5,7 +5,8 @@ from PIL import Image, ImageOps
 from transformers import AutoModel, AutoProcessor
 from collections import defaultdict
 from tqdm import tqdm
-
+from pathlib import Path
+from huggingface_hub import snapshot_download
 
 class SiglipEncoder:
     _cache: Dict[str, Tuple[AutoModel, AutoProcessor]] = {}
@@ -16,9 +17,10 @@ class SiglipEncoder:
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
-        self.cache_dir = os.path.join(
-            os.path.expanduser("~"), ".cache", "huggingface", "hub"
-        )
+        
+        project_root = Path(__file__).resolve().parents[2]
+        self.cache_dir = project_root / "model" / "hf_cache"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.model, self.processor = self._load_model()
         self.type_func_map = {
             "image": self.create_emb_img,
@@ -26,23 +28,32 @@ class SiglipEncoder:
         }
 
     def _load_model(self) -> Tuple[AutoModel, AutoProcessor]:
-        """모델을 캐시에서 로드하거나 새로 로드하여 캐시에 저장합니다."""
+        """모델을 model폴더에서 로드하거나 새로 로드하여 model폴더에 저장합니다."""
         if self.model_name in self._cache:
             return self._cache[self.model_name]
+        
+        org, name = self.model_name.split("/", 1)
+        repo_dir = Path(self.cache_dir) / f"models--{org}--{name}"
+        refs_main = repo_dir / "refs" / "main"
+        
+        snap: Path | None = None
+        if refs_main.exists():
+            commit = refs_main.read_text().strip()
+            candidate = repo_dir / "snapshots" / commit
+            if candidate.exists():
+                snap = candidate
 
-        model = (
-            AutoModel.from_pretrained(
-                self.model_name, cache_dir=self.cache_dir
+        if snap is None:
+            snap_path = snapshot_download(
+                repo_id=self.model_name,
+                cache_dir=str(self.cache_dir),
+                revision="main",
             )
-            .to(self.device)
-            .eval()
-        )
-
-        processor = AutoProcessor.from_pretrained(
-            self.model_name,
-            cache_dir=self.cache_dir,
-        )
-
+            snap = Path(snap_path)
+        
+        model = AutoModel.from_pretrained(str(snap), local_files_only=True).to(self.device).eval()
+        processor = AutoProcessor.from_pretrained(str(snap), local_files_only=True)
+            
         self._cache[self.model_name] = (model, processor)
         return model, processor
 
