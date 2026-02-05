@@ -8,6 +8,9 @@ default:
     text:
       - .txt
       - .md
+  batch_size:
+    image: 16
+    text: 32
   search:
     top_k: 10
   db_path: data/

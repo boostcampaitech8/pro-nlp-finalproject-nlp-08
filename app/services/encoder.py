@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Iterable
 import os
 import torch
 from PIL import Image, ImageOps
@@ -57,7 +57,15 @@ class SiglipEncoder:
         self._cache[self.model_name] = (model, processor)
         return model, processor
 
-    def create_emb_img(self, image_path: str) -> List[float]:
+    def _chuncks(self, iteralbe: Iterable, batch_size: int) -> Iterable[List]:
+        """이터러블을 배치 크기 단위로 나눕니다."""
+        iteralbe = list(iteralbe)
+        for i in range(0, len(iteralbe), batch_size):
+            yield iteralbe[i : i + batch_size]
+
+    def create_emb_img(
+        self, image_paths: List[str], batch_size: int
+    ) -> List[List[float]]:
         """이미지 파일을 읽어 임베딩 벡터를 반환합니다.
 
         Args:
@@ -66,51 +74,71 @@ class SiglipEncoder:
         Returns:
             임베딩 벡터
         """
-        image = Image.open(image_path).convert("RGB")
-        image = ImageOps.exif_transpose(image)
-        inputs = self.processor(
-            images=[image], return_tensors="pt", padding="max_length"
-        ).to(self.device)
+        embeddings = []
+        total_batches = (len(image_paths) + batch_size - 1) // batch_size
 
-        with torch.no_grad():
-            outputs = self.model.get_image_features(**inputs)
+        for batch_paths in tqdm(
+            self._chuncks(image_paths, batch_size),
+            total=total_batches,
+            desc="Embedding images",
+        ):
+            images = [Image.open(path).convert("RGB") for path in batch_paths]
+            images = [ImageOps.exif_transpose(image) for image in images]
+            inputs = self.processor(
+                images=images, return_tensors="pt", padding="max_length"
+            ).to(self.device)
+            with torch.no_grad():
+                outputs = self.model.get_image_features(**inputs)
 
-        image_emb = outputs.pooler_output
-        embedding = image_emb.squeeze().cpu().tolist()
+            image_emb = outputs.pooler_output
+            embeddings.extend(image_emb.cpu().tolist())
+        return embeddings
+
+    def create_emb_txt(
+        self, text_paths: List[str], batch_size: int
+    ) -> List[List[float]]:
+        """텍스트 파일들을 읽어 임베딩 벡터를 반환합니다.
+
+        Args:
+            texts(List[str]): 텍스트 쿼리 리스트
+            batch_size(int): 배치 사이즈
+
+        Returns:
+            임베딩 벡터
+        """
+        if not text_paths:
+            return []
+
+        embedding: List[List[float]] = []
+        total_batches = (len(text_paths) + batch_size - 1) // batch_size
+        for batch_paths in tqdm(
+            self._chuncks(text_paths, batch_size),
+            total=total_batches,
+            desc="Embedding texts",
+        ):
+            batch_texts: List[str] = []
+            for text_path in batch_paths:
+                with open(text_path, "r", encoding="utf-8") as f:
+                    text = f.read()
+                    batch_texts.append(text)
+            inputs = self.processor(
+                text=batch_texts, return_tensors="pt", padding="max_length"
+            ).to(self.device)
+            with torch.no_grad():
+                outputs = self.model.get_text_features(**inputs)
+            text_emb = outputs.pooler_output
+            embedding.extend(text_emb.cpu().tolist())
         return embedding
 
     def create_emb_txt_query(self, text: str) -> List[float]:
-        """텍스트 쿼리를 읽어 임베팅 벡터를 반환합니다.
+        """텍스트를 읽어 임베딩 벡터를 반환합니다.
 
         Args:
-            text: 텍스트 쿼리
+            text: 텍스트 문자열
 
         Returns:
             임베딩 벡터
         """
-        inputs = self.processor(
-            text=[text], return_tensors="pt", padding="max_length"
-        ).to(self.device)
-
-        with torch.no_grad():
-            outputs = self.model.get_text_features(**inputs)
-
-        text_emb = outputs.pooler_output
-        embedding = text_emb.squeeze().cpu().tolist()
-        return embedding
-
-    def create_emb_txt(self, text_path: str) -> List[float]:
-        """텍스트 파일을 읽어 임베딩 벡터를 반환합니다.
-
-        Args:
-            text_path: 텍스트 절대 경로
-
-        Returns:
-            임베딩 벡터
-        """
-        with open(text_path, "r", encoding="utf-8") as f:
-            text = f.read()
-
         inputs = self.processor(
             text=[text], return_tensors="pt", padding="max_length"
         ).to(self.device)
@@ -123,24 +151,31 @@ class SiglipEncoder:
         return embedding
 
     def create_emb_list(
-        self, files_path: Dict[str, List[str]]
+        self,
+        file_paths_dict: Dict[str, List[str]],
+        batch_size: Optional[Dict[str, int]] = None,
     ) -> Dict[str, List[List[float]]]:
         """입력으로 받은 모든 경로의 파일들의 임베딩을 반환합니다.
-
         Args:
-            files_path: 절대 경로 파일 리스트
-
+            file_paths_dict(Dict[str, List[str]]): 파일 경로 딕셔너리
+            예: {"image": ["/path/to/image1.jpg", "/path/to/image2.png"],
+                  "text": ["/path/to/text1.txt", "/path/to/text2.txt"]}
+            batch_size(Optional[Dict[str, int]]): 배치 사이즈 딕셔너리
+            예: {"image": 8, "text": 16}
         Returns:
             임베딩된 결과값들
         """
+        DEFAULT_BATCH_SIZE = 8
+        if batch_size is None:
+            batch_size = {}
+
         embedding_results = defaultdict(list)
 
-        for type_, files in files_path.items():
+        for type_, files in file_paths_dict.items():
             func = self.type_func_map.get(type_)
             if func is None:
                 continue
-            for file_path in tqdm(files, desc=f"Embedding {type_} files"):
-                embedding = func(file_path)
-                embedding_results[type_].append(embedding)
+            embeddings = func(files, batch_size.get(type_, DEFAULT_BATCH_SIZE))
+            embedding_results[type_] = embeddings
 
         return dict(embedding_results)

@@ -40,7 +40,7 @@ class VectorStore:
             os.path.join(self.db_path, "metadata.db")
         )
         self.encoder = SiglipEncoder(cfg.model.name)
-
+        self.batch_size = cfg.batch_size
         self.faiss_indices = {}
 
         os.makedirs(self.db_path, exist_ok=True)
@@ -229,7 +229,7 @@ class VectorStore:
             )
 
         self._remove_data(to_delete_ids)
-        embed_list = self.encoder.create_emb_list(to_embed_paths)
+        embed_list = self.encoder.create_emb_list(to_embed_paths, self.batch_size)
         self._add_data(dict(to_embed_paths), embed_list)
 
     def search(

@@ -221,8 +221,7 @@ class SearchApp:
                 ),
             )
         except Exception as e:
-            error_msg = str(e)
-            self.root.after(0, lambda: self._display_error(error_msg))
+            self.root.after(0, lambda e=e: self._display_error(str(e)))
 
     def _display_results(self, results, target_dir, query, target_extensions):
         """검색 결과 표시"""
