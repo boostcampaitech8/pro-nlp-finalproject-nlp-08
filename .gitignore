@@ -17,3 +17,6 @@ outputs/
 build/
 dist/
 data/
+
+# Environment Variables
+.env

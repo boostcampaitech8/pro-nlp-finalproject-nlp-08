@@ -5,6 +5,7 @@ import os
 import sys
 
 import hydra
+from dotenv import load_dotenv
 from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
 
@@ -40,10 +41,18 @@ class SearchApp:
 
         # 검색어 입력 영역
         self.search_entry = tk.Entry(root)
-        self.search_entry.place(x=10, y=50, width=650, height=28)
+        self.search_entry.place(x=10, y=50, width=450, height=28)
 
         self.search_button = tk.Button(root, text="검색", command=self.search)
         self.search_button.place(x=670, y=48, width=100, height=32)
+
+        # Top K 입력 영역
+        tk.Label(root, text="Top K:", bg="#f0f0f0").place(x=470, y=52)
+        self.top_k_var = tk.StringVar(value="10")
+        self.top_k_entry = tk.Spinbox(
+            root, from_=1, to=100, textvariable=self.top_k_var, width=10
+        )
+        self.top_k_entry.place(x=520, y=50, width=80, height=28)
 
         # 타입별로 그룹핑된 체크박스 프레임 생성 (좌측)
         self.ext_vars = {}
@@ -193,6 +202,16 @@ class SearchApp:
             )
             return
 
+        # Top K 값 가져오기
+        try:
+            top_k = int(self.top_k_var.get())
+            if top_k < 1:
+                messagebox.showwarning("경고", "Top K는 1 이상이어야 합니다.")
+                return
+        except ValueError:
+            messagebox.showwarning("경고", "Top K는 숫자여야 합니다.")
+            return
+
         # 검색 중 표시
         self.result_text.insert(tk.END, "검색 중...\n")
         self.search_button.config(state="disabled")
@@ -201,17 +220,28 @@ class SearchApp:
         # 백그라운드에서 검색 실행
         thread = threading.Thread(
             target=self._run_search,
-            args=(search_query, file_path, target_extensions_map, extensions),
+            args=(
+                search_query,
+                file_path,
+                target_extensions_map,
+                extensions,
+                top_k,
+            ),
         )
         thread.start()
 
     def _run_search(
-        self, query, target_dir, target_extensions_map, selected_extensions
+        self,
+        query,
+        target_dir,
+        target_extensions_map,
+        selected_extensions,
+        top_k,
     ):
         """백그라운드에서 검색 실행"""
         try:
             results = search(
-                query, target_dir, target_extensions_map, self.cfg
+                query, target_dir, target_extensions_map, self.cfg, top_k=top_k
             )
             # UI 업데이트는 메인 스레드에서 실행
             self.root.after(
@@ -307,6 +337,7 @@ class SearchApp:
 
 def main() -> None:
     config_dir = get_config_dir()
+    load_dotenv(os.path.join(os.path.dirname(config_dir), ".env"))
 
     with initialize_config_dir(version_base=None, config_dir=config_dir):
         cfg = compose(config_name="config")

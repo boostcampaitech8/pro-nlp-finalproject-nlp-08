@@ -8,6 +8,8 @@ default:
     text:
       - .txt
       - .md
+    docs:
+      - .pdf
   batch_size:
     image: 16
     text: 32
@@ -19,3 +21,12 @@ default:
     port: 8081
   model:
     name: google/siglip2-so400m-patch16-naflex
+  vlm:
+    enabled: true
+    provider: clova_studio
+    clova_studio:
+      api_base_url: "https://clovastudio.stream.ntruss.com/v1/openai"
+      model_name: "HCX-005"
+      api_key: ""
+      max_tokens: 100
+    min_image_pixels: 1000

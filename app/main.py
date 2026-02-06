@@ -1,5 +1,7 @@
 import hydra
 import uvicorn
+import os
+from dotenv import load_dotenv
 from omegaconf import DictConfig
 from fastapi import FastAPI
 
@@ -27,6 +29,7 @@ def main(cfg: DictConfig) -> None:
     """
     Hydra 설정을 로드하고 FastAPI 서버를 실행합니다.
     """
+    load_dotenv()
     app_cfg = cfg.default
     app = create_app(app_cfg)
     uvicorn.run(app, host=app_cfg.server.host, port=app_cfg.server.port)

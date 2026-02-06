@@ -1,5 +1,12 @@
 from typing import Dict, List, Optional, Tuple, Iterable
 import os
+from omegaconf import DictConfig
+import torch
+from PIL import Image, ImageOps
+from transformers import AutoModel, AutoProcessor
+
+from app.services.pdf_processor import pdf_to_combined_text
+
 import torch
 from PIL import Image, ImageOps
 from transformers import AutoModel, AutoProcessor
@@ -7,6 +14,7 @@ from collections import defaultdict
 from tqdm import tqdm
 from pathlib import Path
 from huggingface_hub import snapshot_download
+
 
 class SiglipEncoder:
     _cache: Dict[str, Tuple[AutoModel, AutoProcessor]] = {}
@@ -17,7 +25,7 @@ class SiglipEncoder:
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
-        
+
         project_root = Path(__file__).resolve().parents[2]
         self.cache_dir = project_root / "model" / "hf_cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -31,11 +39,11 @@ class SiglipEncoder:
         """모델을 model폴더에서 로드하거나 새로 로드하여 model폴더에 저장합니다."""
         if self.model_name in self._cache:
             return self._cache[self.model_name]
-        
+
         org, name = self.model_name.split("/", 1)
         repo_dir = Path(self.cache_dir) / f"models--{org}--{name}"
         refs_main = repo_dir / "refs" / "main"
-        
+
         snap: Path | None = None
         if refs_main.exists():
             commit = refs_main.read_text().strip()
@@ -50,10 +58,16 @@ class SiglipEncoder:
                 revision="main",
             )
             snap = Path(snap_path)
-        
-        model = AutoModel.from_pretrained(str(snap), local_files_only=True).to(self.device).eval()
-        processor = AutoProcessor.from_pretrained(str(snap), local_files_only=True)
-            
+
+        model = (
+            AutoModel.from_pretrained(str(snap), local_files_only=True)
+            .to(self.device)
+            .eval()
+        )
+        processor = AutoProcessor.from_pretrained(
+            str(snap), local_files_only=True
+        )
+
         self._cache[self.model_name] = (model, processor)
         return model, processor
 
@@ -150,6 +164,21 @@ class SiglipEncoder:
         embedding = text_emb.squeeze().cpu().tolist()
         return embedding
 
+    def create_emb_pdf(self, pdf_path: str) -> List[float]:
+        """PDF 파일을 처리해 임베딩 벡터를 반환합니다.
+        - PyMuPDF로 추출한 텍스트 + 이미지/표/그래프는 VLM으로 텍스트화한 뒤
+        - 두 부분을 합친 문자열을 텍스트 인코더에 넣어 임베딩합니다.
+
+        Args:
+            pdf_path: PDF 파일 절대 경로
+
+        Returns:
+            임베딩 벡터
+        """
+        combined_text = pdf_to_combined_text(pdf_path, self.cfg)
+        # 함수명은 embed_txt_query지만, 파일이 아닌 문자열 입력도 처리함
+        return self.create_emb_txt_query(combined_text)
+
     def create_emb_list(
         self,
         file_paths_dict: Dict[str, List[str]],
@@ -177,5 +206,4 @@ class SiglipEncoder:
                 continue
             embeddings = func(files, batch_size.get(type_, DEFAULT_BATCH_SIZE))
             embedding_results[type_] = embeddings
-
         return dict(embedding_results)

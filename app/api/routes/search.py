@@ -125,7 +125,7 @@ def search(
     search_args["cache_path"] = getattr(
         config, "cache_path", "data/embeddings.pkl"
     )
-    print(search_args)
+    search_args["cfg"] = config
 
     results = search_service(**search_args)
     return {"status": "success", "results": results}
