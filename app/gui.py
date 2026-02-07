@@ -3,11 +3,18 @@ from tkinter import filedialog, messagebox
 import threading
 import os
 import sys
+from pathlib import Path
 
 import hydra
 from dotenv import load_dotenv
 from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_HF_HOME = _PROJECT_ROOT / "model" / "hf_home"
+os.environ.setdefault("HF_HOME", str(_HF_HOME))
+os.environ.setdefault("HF_HUB_CACHE", str(_PROJECT_ROOT / "model" / "hf_cache"))
+os.environ.setdefault("HF_MODULES_CACHE", str(_HF_HOME / "modules"))
 
 from app.services.search_engine import search
 

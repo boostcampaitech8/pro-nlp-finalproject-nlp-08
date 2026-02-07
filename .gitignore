@@ -18,5 +18,7 @@ build/
 dist/
 data/
 
+model/
+pro_nlp_finalproject_nlp_08.egg-info/
 # Environment Variables
 .env

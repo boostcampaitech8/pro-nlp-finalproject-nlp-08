@@ -2,7 +2,7 @@
 import pickle
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
-from app.services.encoder import SiglipEncoder
+from app.services.encoder import Encoder
 import sqlite3
 import os
 import faiss
@@ -39,8 +39,10 @@ class VectorStore:
         self.sqlite_path = os.path.abspath(
             os.path.join(self.db_path, "metadata.db")
         )
-        self.encoder = SiglipEncoder(cfg.model.name)
-        self.batch_size = cfg.batch_size
+        # target_extensions의 키를 target_types로 활용하여 필요한 encoder만 로딩
+        target_types = set(target_extensions.keys())
+        self.encoder = Encoder(cfg=cfg, target_types=target_types)
+        self.batch_size = dict(cfg.batch_size)
         self.faiss_indices = {}
 
         os.makedirs(self.db_path, exist_ok=True)
@@ -229,7 +231,9 @@ class VectorStore:
             )
 
         self._remove_data(to_delete_ids)
-        embed_list = self.encoder.create_emb_list(to_embed_paths, self.batch_size)
+        embed_list = self.encoder.create_embedding_list(
+            dict(to_embed_paths), self.batch_size
+        )
         self._add_data(dict(to_embed_paths), embed_list)
 
     def search(
@@ -248,16 +252,8 @@ class VectorStore:
             Dict[str, List[Tuple[str, float]]]: 유사도 상위 topk개의 절대경로와 유사도 점수
             예: {'image': [('/path/to/similar_image1.jpg', 0.95), ...], 'text': [('/path/to/similar_doc1.txt', 0.89), ...]}
         """
-        query_embedding = self.encoder.create_emb_txt_query(query)
-        query_vector = (
-            np.array(query_embedding).astype("float32").reshape(1, -1)
-        )
-        faiss.normalize_L2(query_vector)
-
         results = defaultdict(list)
-
         db_files = self._fetch_db_metadata()
-
         allowed_indices = {}
 
         for type_, paths_dict in db_files.items():
@@ -268,6 +264,12 @@ class VectorStore:
             allowed_indices[type_] = type_id_map
 
         for type_, id_map in allowed_indices.items():
+            query_embedding = self.encoder.create_query_embedding(query, type_)
+            query_vector = (
+                np.array(query_embedding).astype("float32").reshape(1, -1)
+            )
+            faiss.normalize_L2(query_vector)
+
             index = self._load_faiss_index(type_)
             if index is None or index.ntotal == 0:
                 continue
