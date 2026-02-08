@@ -82,11 +82,10 @@ class ImageEncoder(BaseEncoder):
                     rgb = ImageOps.exif_transpose(img).convert("RGB")
                     images.append(rgb)
             inputs = self.processor(
-                images=images, return_tensors="pt", padding=True
+                images=images, return_tensors="pt", padding="max_length"
             ).to(self.device)
             with torch.inference_mode():
                 image_emb = self.model.get_image_features(**inputs)
-
             embeddings.extend(image_emb.cpu().tolist())
         return embeddings
 
@@ -96,11 +95,10 @@ class ImageEncoder(BaseEncoder):
             return []
 
         inputs = self.processor(
-            text=[query], return_tensors="pt", padding=True
+            text=[query], return_tensors="pt", padding="max_length"
         ).to(self.device)
 
         with torch.inference_mode():
             text_emb = self.model.get_text_features(**inputs)
-
         embedding = text_emb.squeeze().cpu().tolist()
         return embedding

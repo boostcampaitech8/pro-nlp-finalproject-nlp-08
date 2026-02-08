@@ -1,7 +1,7 @@
 # 캐시 조회 저장 삭제 업데이트
 import pickle
 import numpy as np
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Callable
 from app.services.encoder import Encoder
 import sqlite3
 import os
@@ -29,6 +29,7 @@ class VectorStore:
         target_dir: str,
         target_extensions: Dict[str, List[str]],
         cfg: DictConfig,
+        progress_callback: Optional[Callable[[int, str], None]] = None,
     ):
         ROOT_DIR = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "..", "..")
@@ -39,9 +40,17 @@ class VectorStore:
         self.sqlite_path = os.path.abspath(
             os.path.join(self.db_path, "metadata.db")
         )
+        self.progress_callback = progress_callback
         # target_extensions의 키를 target_types로 활용하여 필요한 encoder만 로딩
         target_types = set(target_extensions.keys())
+
+        # 모델 로드
+        if self.progress_callback:
+            self.progress_callback(0, "모델 로드 중")
         self.encoder = Encoder(cfg=cfg, target_types=target_types)
+        if self.progress_callback:
+            self.progress_callback(100, "모델 로드 완료")
+
         self.batch_size = dict(cfg.batch_size)
         self.faiss_indices = {}
 
@@ -59,6 +68,17 @@ class VectorStore:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_extension ON metadata(extension)"
             )
+
+    def _update_progress(
+        self,
+        progress: int,
+        message: str,
+        callback: Optional[Callable[[int, str], None]] = None,
+    ):
+        """진행 상황 업데이트 헬퍼 메서드"""
+        cb = callback if callback is not None else self.progress_callback
+        if cb:
+            cb(progress, message)
 
     def _load_faiss_index(
         self, type_: str, dim: Optional[int] = None
@@ -209,6 +229,7 @@ class VectorStore:
             local_files: (Dict[str, List[str]]): 임베딩할 파일들의 전체 경로 리스트
             예: {'image': ['/path/to/image1.jpg', '/path/to/image2.png'], 'text': ['/path/to/doc1.txt']}
         """
+        self._update_progress(0, "벡터 스토어 동기화 준비 중")
         db_files = self._fetch_db_metadata()
         to_delete_ids = defaultdict(
             list
@@ -217,6 +238,7 @@ class VectorStore:
             list
         )  # 임베딩 해야할 것: 로컬에서 수정된 것, 새로 생긴 것. 임배딩 생성을 위해 path를 담음
 
+        self._update_progress(5, "변경된 파일 확인 중")
         for type, files in db_files.items():
             for path, info in files.items():
                 if path not in local_files.get(type, []):
@@ -230,16 +252,29 @@ class VectorStore:
                 list(set(paths) - set(db_files.get(type_, {}).keys()))
             )
 
+        self._update_progress(10, "삭제할 파일 처리 중")
         self._remove_data(to_delete_ids)
-        embed_list = self.encoder.create_embedding_list(
-            dict(to_embed_paths), self.batch_size
-        )
-        self._add_data(dict(to_embed_paths), embed_list)
+
+        total_files = sum(len(paths) for paths in to_embed_paths.values())
+        if total_files > 0:
+            self._update_progress(
+                15, f"임베딩 생성 중 (총 {total_files}개 파일)"
+            )
+            embed_list = self.encoder.create_embedding_list(
+                dict(to_embed_paths), self.batch_size
+            )
+            self._update_progress(90, "인덱스 업데이트 중")
+            self._add_data(dict(to_embed_paths), embed_list)
+        else:
+            self._update_progress(90, "새로운 파일 없음")
+
+        self._update_progress(100, "벡터 스토어 동기화 완료")
 
     def search(
         self,
         query: str,
         top_k: int,
+        progress_callback: Optional[Callable[[int, str], None]] = None,
     ) -> Dict[str, List[Tuple[str, float]]]:
         """
         코사인 유사도를 통해 쿼리와 유사한 절대경로를 topk개 반환
@@ -247,12 +282,14 @@ class VectorStore:
         Args:
             query (str): 자연어 쿼리
             topk (int): 반환할 유사도 상위 개수
+            progress_callback (Callable[[int, str], None], optional): 진행 상황 콜백 함수
+                None이면 self.progress_callback 사용
 
         Returns:
             Dict[str, List[Tuple[str, float]]]: 유사도 상위 topk개의 절대경로와 유사도 점수
             예: {'image': [('/path/to/similar_image1.jpg', 0.95), ...], 'text': [('/path/to/similar_doc1.txt', 0.89), ...]}
         """
-        results = defaultdict(list)
+        self._update_progress(25, "메타데이터 조회 중", progress_callback)
         db_files = self._fetch_db_metadata()
         allowed_indices = {}
 
@@ -263,16 +300,46 @@ class VectorStore:
                 type_id_map[row_id] = path
             allowed_indices[type_] = type_id_map
 
-        for type_, id_map in allowed_indices.items():
-            query_embedding = self.encoder.create_query_embedding(query, type_)
-            query_vector = (
-                np.array(query_embedding).astype("float32").reshape(1, -1)
-            )
-            faiss.normalize_L2(query_vector)
+        self._update_progress(30, "검색 실행 중", progress_callback)
+        type_list = list(allowed_indices.items())
+        results = defaultdict(list)
 
+        for type_idx, (type_, id_map) in enumerate(type_list):
             index = self._load_faiss_index(type_)
             if index is None or index.ntotal == 0:
                 continue
+
+            if len(type_list) > 0:
+                progress = 30 + int(
+                    (type_idx / len(type_list)) * 60
+                )  # 30-90% 범위
+                type_name = (
+                    "이미지"
+                    if type_ == "image"
+                    else (
+                        "텍스트"
+                        if type_ == "text"
+                        else (
+                            "음성"
+                            if type_ == "voice"
+                            else "문서" if type_ == "docs" else type_
+                        )
+                    )
+                )
+                self._update_progress(
+                    progress, f"{type_name} 검색 중", progress_callback
+                )
+
+            # 타입별 쿼리 임베딩 생성
+            try:
+                query_embedding = self.encoder.create_query_embedding(query, type_)
+                query_vector = (
+                    np.array(query_embedding).astype("float32").reshape(1, -1)
+                )
+                faiss.normalize_L2(query_vector)
+            except KeyError:
+                continue
+
             id_array = np.array(list(id_map.keys())).astype("int64")
             selector = faiss.IDSelectorBatch(id_array)
             params = faiss.SearchParameters(sel=selector)
@@ -283,4 +350,5 @@ class VectorStore:
                     continue
                 results[type_].append((id_map[idx], float(score)))
 
+        self._update_progress(100, "검색 완료", progress_callback)
         return dict(results)

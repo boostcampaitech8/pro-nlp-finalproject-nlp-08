@@ -23,17 +23,17 @@ class Encoder:
         """
         self.encoders: Dict[str, BaseEncoder] = {}
         self.cfg = cfg
-        
+
         model_names = dict(cfg.model_name)
-        
+
         # target_types가 None이면 cfg.allowed_extensions의 키들 사용
         if target_types is None:
             target_types = set(cfg.allowed_extensions.keys())
-        
+
         # text/docs 중 하나라도 필요하면 TextEncoder 생성
         need_text_encoder = bool(target_types & {"text", "docs"})
         text_encoder: Optional[TextEncoder] = None
-        
+
         if need_text_encoder:
             text_encoder = TextEncoder(model_name=model_names["text"])
             if "text" in target_types:
