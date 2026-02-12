@@ -1,0 +1,78 @@
+name: "Bug Report"
+title: "🐛 fix: "
+description: "버그 리포트를 위한 템플릿입니다."
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: 🐛 Bug Description
+      description: 발생한 버그에 대해 명확하고 간결하게 설명해 주세요.
+      placeholder: |
+        어떤 문제가 발생했나요?
+        언제 이 문제를 발견했나요?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 🔄 Steps to Reproduce
+      description: 버그를 재현할 수 있는 단계를 작성해 주세요.
+      placeholder: |
+        1. '...'로 이동
+        2. '...' 클릭
+        3. '...'까지 스크롤
+        4. 에러 확인
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ Expected Behavior
+      description: 예상했던 정상 동작을 설명해 주세요.
+      placeholder: 원래 어떻게 동작해야 하나요?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ❌ Actual Behavior
+      description: 실제로 발생한 동작을 설명해 주세요.
+      placeholder: 실제로는 어떻게 동작했나요?
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: 🚨 Priority
+      description: 버그의 우선순위를 선택해 주세요.
+      options:
+        - 🔴 Critical (치명적 - 즉시 수정 필요)
+        - 🟠 High (높음 - 빠른 수정 필요)
+        - 🟡 Medium (보통 - 일반적인 수정)
+        - 🟢 Low (낮음 - 여유있게 수정 가능)
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 💻 Environment
+      description: 버그가 발생한 환경 정보를 작성해 주세요.
+      placeholder: |
+        - OS: [예: Windows 11, macOS 14.0, Ubuntu 22.04]
+        - Browser: [예: Chrome 120, Firefox 121, Safari 17]
+        - Version: [예: v1.2.3]
+        - Device: [예: Desktop, Mobile, Tablet]
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 📸 Screenshots / Logs
+      description: 스크린샷, 에러 로그, 콘솔 출력 등을 첨부해 주세요.
+      placeholder: |
+        스크린샷을 드래그 앤 드롭하거나 붙여넣기 하세요.
+        ```
+        에러 로그나 콘솔 출력을 여기에 붙여넣으세요.
+        ```
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 🔗 Related Issues
+      description: 관련된 이슈나 PR이 있다면 링크(#번호)를 남겨주세요.
+    validations:
+      required: false

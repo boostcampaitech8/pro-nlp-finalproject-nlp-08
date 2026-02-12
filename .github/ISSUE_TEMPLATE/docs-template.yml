@@ -1,0 +1,45 @@
+name: "Documentation"
+title: "📝 docs: "
+description: "문서 작성 및 수정을 위한 템플릿입니다."
+labels: ["documentation"]
+body:
+  - type: dropdown
+    attributes:
+      label: 📚 Documentation Type
+      description: 문서 작업의 유형을 선택해 주세요.
+      options:
+        - 새로운 문서 작성
+        - 기존 문서 수정
+        - 문서 번역
+        - API 문서
+        - 사용자 가이드
+        - 기타
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 📄 Description
+      description: 작성하거나 수정할 문서에 대해 설명해 주세요.
+      placeholder: |
+        어떤 문서인가요?
+        왜 이 문서가 필요한가요?
+        어떤 내용을 다루나요?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ To Do
+      description: 문서 작업 항목을 체크박스 형태로 작성해주세요.
+      placeholder: |
+        - [ ] 문서 구조 설계
+        - [ ] 초안 작성
+        - [ ] 코드 예제 추가
+        - [ ] 리뷰 반영
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 🔗 Related Issues
+      description: 관련된 이슈나 PR이 있다면 링크(#번호)를 남겨주세요.
+    validations:
+      required: false

@@ -1,0 +1,63 @@
+name: "Feature Request"
+title: "✨ feat: "
+description: "새로운 기능 제안을 위한 템플릿입니다."
+labels: ["feature"]
+body:
+  - type: textarea
+    attributes:
+      label: 📄 Description
+      description: 제안하시는 기능에 대해 구체적으로 설명해 주세요.
+      placeholder: |
+        어떤 기능인가요?
+        이 기능이 구현되면 어떤 점이 좋아지나요?
+        누가 이 기능을 사용하나요?
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: 🎯 Priority
+      description: 기능의 우선순위를 선택해 주세요.
+      options:
+        - 🔴 Critical (긴급 - 즉시 구현 필요)
+        - 🟠 High (높음 - 빠른 구현 필요)
+        - 🟡 Medium (보통 - 일반적인 구현)
+        - 🟢 Low (낮음 - 여유있게 구현 가능)
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 📂 Impact Scope
+      description: 이 기능이 영향을 줄 것으로 예상되는 파일, 모듈, 컴포넌트를 작성해 주세요.
+      placeholder: |
+        - src/components/Header.tsx
+        - src/services/auth.ts
+        - API endpoints
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: ✅ Acceptance Criteria
+      description: 이 기능이 완료되었다고 판단할 수 있는 기준을 작성해 주세요.
+      placeholder: |
+        - [ ] 사용자가 로그인 버튼을 클릭하면 로그인 모달이 표시된다
+        - [ ] 유효하지 않은 입력 시 에러 메시지가 표시된다
+        - [ ] 로그인 성공 시 대시보드로 리다이렉트된다
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 🛠️ To Do
+      description: 구현을 위한 세부 작업을 체크박스 형태로 작성해주세요.
+      placeholder: |
+        - [ ] UI 디자인/마크업
+        - [ ] API 연동
+        - [ ] 유닛 테스트 작성
+        - [ ] 문서 업데이트
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 🔗 Related Issues
+      description: 관련된 이슈나 PR이 있다면 링크(#번호)를 남겨주세요.
+    validations:
+      required: false

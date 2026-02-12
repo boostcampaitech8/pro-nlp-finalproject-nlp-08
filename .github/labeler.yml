@@ -1,0 +1,18 @@
+# enable labeler on prs
+enable:
+  prs: true
+
+# 레이블 규칙
+labels:
+  'feature':
+    include:
+      - '\bfeat\b'
+  'fix':
+    include:
+      - '\bfix\b'
+  'documentation':
+    include:
+      - '\bdocs\b'
+  'refactor':
+    include:
+      - '\brefactor\b'

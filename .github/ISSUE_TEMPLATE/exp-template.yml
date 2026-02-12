@@ -1,0 +1,50 @@
+name: "Experiment"
+title: "📈 exp: "
+description: "실험적 기능이나 검증이 필요한 작업을 위한 템플릿입니다."
+labels: ["experiment"]
+body:
+  - type: textarea
+    attributes:
+      label: 🔬 Experiment Overview
+      description: 실험하려는 내용에 대해 설명해 주세요.
+      placeholder: |
+        무엇을 실험하려고 하나요?
+        왜 이 실험이 필요한가요?
+        기대하는 결과는 무엇인가요?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 📊 Hypothesis
+      description: 가설을 작성해 주세요.
+      placeholder: |
+        이 실험을 통해 검증하려는 가설은 무엇인가요?
+        예상되는 결과는 무엇인가요?
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 🧪 Test Plan
+      description: 실험 계획과 방법을 작성해 주세요.
+      placeholder: |
+        - [ ] 실험 환경 설정
+        - [ ] 테스트 케이스 작성
+        - [ ] 데이터 수집 방법
+        - [ ] 성공/실패 기준
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 📈 Success Criteria
+      description: 실험의 성공 기준을 명확히 작성해 주세요.
+      placeholder: |
+        어떤 결과가 나오면 성공으로 판단하나요?
+        측정 가능한 지표는 무엇인가요?
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: 🔗 Related Issues
+      description: 관련된 이슈나 PR이 있다면 링크(#번호)를 남겨주세요.
+    validations:
+      required: false
