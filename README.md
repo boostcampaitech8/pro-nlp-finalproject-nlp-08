@@ -270,7 +270,7 @@ classDiagram
  ┃ ┗ 📜config.yaml             # 모델 경로, API 키, 인덱싱 설정 등 저장
  ┣ 📂data                      # 생성된 벡터 인덱스 및 메타데이터 DB 저장 경로
  ┃ ┣ 📜index_image.faiss       # 이미지 벡터 저장용 FAISS 인덱스
- ┃ ┣ 📜index_text.faiss        # 텍스트/문서 벡터 저장용 FAISS 인덱스
+ ┃ ┣ 📜index_text.faiss       # 텍스트/문서 벡터 저장용 FAISS 인덱스
  ┃ ┗ 📜metadata.db             # 파일 경로 및 상태 정보 관리용 SQLite DB
  ┣ 📂model                     # 로컬에 다운로드된 AI 모델 가중치 저장소
  ┣ 📂outputs / 📂results       # 검색 결과 리포트 및 로그 출력 폴더
@@ -338,15 +338,19 @@ python -m app.gui
 python main.py
 ```
 
+> **참고:** `gui.py`(또는 `python -m app.gui`)를 실행할 때는 `.env_example`을 `.env`로 복사한 뒤, 필요한 값(예: `CLOVA_STUDIO_API_KEY`)을 넣어야 합니다.
+
 ### 빌드 (.exe 배포)
 
 PyInstaller를 사용하여 단일 실행 파일로 패키징할 수 있습니다.
 
 ```bash
-pyinstaller gui.spec --clean
+pyinstaller gui.spec --clean --noconfirm
 ```
 
 빌드 완료 시 `dist/` 폴더에 실행 파일이 생성됩니다.
+
+> **참고:** exe 빌드에서는 PDF 검색이 지원되지 않습니다.
 
 ## ⚙ 설정 (config.yaml)
 
@@ -388,7 +392,7 @@ default:
 2️⃣ 자연어 검색어를 입력하여 의미론적 검색을 수행합니다. Top K를 조절하여 K개의 검색 결과가 나오도록 조절할 수 있습니다.<br>
 3️⃣ 다양한 확장자들 중 원하는 확장자를 지정하여 검색할 수 있습니다.<br>
 4️⃣ 검색 버튼 클릭 시 바형 인터페이스로 검색 진행 상황을 보여줍니다.<br>
-5️⃣ 파일 형식 (“image”, ”text”, ”docs”) 별로 검색 결과를 절대 경로로 보여주고, 클릭할 경우 해당 경로에 있는 파일을 실행합니다.<br>
+5️⃣ 파일 형식 ("image", "text", "docs") 별로 검색 결과를 절대 경로로 보여주고, 클릭할 경우 해당 경로에 있는 파일을 실행합니다.<br>
 ### 🎥 시연 영상
 시연 영상: https://www.youtube.com/watch?v=nFPk2s7823Q&feature=youtu.be
 
