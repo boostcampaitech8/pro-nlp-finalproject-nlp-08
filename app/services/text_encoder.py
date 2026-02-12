@@ -2,6 +2,7 @@ from typing import Dict, List
 
 import torch
 from transformers import AutoModel
+from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 from pathlib import Path
 
@@ -25,26 +26,24 @@ class TextEncoder(BaseEncoder):
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.model = self._load_model()
 
-    def _load_model(self) -> AutoModel:
+    def _load_model(self) -> SentenceTransformer:
         """모델을 로컬 캐시 우선으로 로드하고, 없으면 다운로드합니다."""
         if self.model_name in self._cache:
             return self._cache[self.model_name]
 
         try:
-            # 1) 로컬 캐시만으로 로드 시도
-            model = AutoModel.from_pretrained(
+            model = SentenceTransformer(
                 self.model_name,
-                cache_dir=str(self.cache_dir),
-                local_files_only=True,
-                trust_remote_code=True,
+                cache_folder=str(self.cache_dir),
+                device=self.device,
             )
-        except OSError as e:
-            # 2) 필요 시 다운로드 허용
-            model = AutoModel.from_pretrained(
+        except Exception:
+            model = SentenceTransformer(
                 self.model_name,
-                cache_dir=str(self.cache_dir),
-                trust_remote_code=True,
+                cache_folder=str(self.cache_dir),
+                device=self.device,
             )
+
 
         model = model.to(self.device).eval()
 
@@ -77,8 +76,8 @@ class TextEncoder(BaseEncoder):
                     batch_texts.append(text)
             with torch.no_grad():
                 embeddings = self.model.encode(
-                    batch_texts, task="retrieval.passage"
-                )
+                    ['passage: '+ text for text in batch_texts]
+                , normalize_embeddings=True)
             embedding.extend(embeddings.tolist())
         return embedding
 
@@ -92,5 +91,5 @@ class TextEncoder(BaseEncoder):
             임베딩 벡터
         """
         with torch.no_grad():
-            embeddings = self.model.encode([query], task="retrieval.query")
+            embeddings = self.model.encode(['query: '+ query], normalize_embeddings=True)
         return embeddings[0].squeeze().tolist()

@@ -17,7 +17,7 @@ default:
   db_path: data/
   model_name:
     image: google/siglip2-so400m-patch16-naflex
-    text: jinaai/jina-embeddings-v3
+    text: intfloat/multilingual-e5-small
   vlm:
     enabled: true
     provider: clova_studio
