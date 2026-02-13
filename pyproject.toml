@@ -26,6 +26,8 @@ dependencies = [
     "openai>=2.16.0",
     "pymupdf>=1.26.7",
     "python-dotenv>=1.2.1",
+    "easyocr>=1.7.2",
+    "sentence-transformers>=5.2.2",
 ]
 
 [dependency-groups]
