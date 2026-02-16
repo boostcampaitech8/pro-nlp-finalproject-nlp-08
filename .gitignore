@@ -1,0 +1,24 @@
+# UV 관련
+.venv/
+__pycache__/
+*.pyc
+uv.lock
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.wsuo
+
+# Build
+bin/
+obj/
+outputs/
+build/
+dist/
+data/
+
+model/
+pro_nlp_finalproject_nlp_08.egg-info/
+# Environment Variables
+.env

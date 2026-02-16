@@ -1,0 +1,29 @@
+default:
+  allowed_extensions:
+    image:
+      - .jpg
+      - .jpeg
+      - .png
+    text:
+      - .txt
+      - .md
+    docs:
+      - .pdf
+  batch_size:
+    image: 1
+    text: 1
+  search:
+    top_k: 10
+  db_path: data/
+  model_name:
+    image: google/siglip2-so400m-patch16-naflex
+    text: intfloat/multilingual-e5-small
+  vlm:
+    enabled: true
+    provider: clova_studio
+    clova_studio:
+      api_base_url: "https://clovastudio.stream.ntruss.com/v1/openai"
+      model_name: "HCX-005"
+      max_tokens: 100
+      api_key: ""
+    min_image_pixels: 1000

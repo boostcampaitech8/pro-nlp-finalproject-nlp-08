@@ -1,0 +1,17 @@
+{
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true 
+    },
+    "black-formatter.importStrategy": "fromEnvironment",
+    "gitmoji.addCustomEmoji": [
+        { "emoji": "✨ feat: ", "entity": "sparkles", "code": ":sparkles:", "description": "신규 기능 추가" },
+        { "emoji": "🐛 fix: ", "entity": "bug", "code": ":bug:", "description": "버그 수정" },
+        { "emoji": "♻️ refactor: ", "entity": "recycle", "code": ":recycle:", "description": "리팩토링" },
+        { "emoji": "📦 backup: ", "entity": "package", "code": ":package:", "description": "작업 중 보관/장비 불안정 수시 백업" },
+        { "emoji": "📝 docs: ", "entity": "memo", "code": ":memo:", "description": "문서 수정" },
+        { "emoji": "📈 exp: ", "entity": "chart_with_upwards_trend", "code": ":chart_with_upwards_trend:", "description": "실험 및 성능평가" }
+    ],
+    "gitmoji.onlyUseCustomEmoji": true,
+    "python-envs.pythonProjects": []
+}
