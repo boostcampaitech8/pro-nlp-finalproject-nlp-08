@@ -1,5 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# -*- mode: python ; coding: utf-8 -*-
+
+from PyInstaller.utils.hooks import collect_submodules
+
 block_cipher = None
 
 added_files = [('./config/*', './config')]
@@ -9,7 +13,13 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=added_files,
-    hiddenimports=[],
+    hiddenimports=(
+        collect_submodules("transformers")
+        + collect_submodules("torch")
+        + collect_submodules("tokenizers")
+        + collect_submodules("safetensors")
+        + collect_submodules("huggingface_hub")
+    ),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -18,6 +28,7 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False
 )
+
 pyz = PYZ(a.pure, a.zipped_data,
             cipher=block_cipher)
 

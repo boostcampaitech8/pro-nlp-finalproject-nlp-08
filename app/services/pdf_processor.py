@@ -48,7 +48,6 @@ def extract_text_and_images(
             if page_text.strip():
                 text_parts.append(page_text)
 
-            # extract_pdf_text_and_images.py와 동일: extract_image로 원본 바이트·확장자 반환
             for img_info in page.get_images(full=True):
                 xref = img_info[0]
                 try:
@@ -140,3 +139,108 @@ def pdf_to_combined_text(
     if vlm_text:
         return "[이미지·표·그래프 설명]\n\n" + vlm_text
     return full_text
+
+
+def pdf_to_text_only(
+    pdf_path: str,
+    min_image_pixels: int = 1000,
+) -> str:
+    """
+    PDF에서 텍스트만 추출합니다 (이미지/표/그래프는 무시).
+    비교 실험용 베이스라인: VLM 없이 PyMuPDF 텍스트만 사용할 때의 품질 측정.
+
+    Args:
+        pdf_path: PDF 파일 절대 경로
+        min_image_pixels: extract_text_and_images에 전달 (이미지 추출 시 필터용, 텍스트에는 미사용)
+
+    Returns:
+        추출된 텍스트만 이어 붙인 문자열
+    """
+    full_text, _ = extract_text_and_images(
+        pdf_path, min_image_pixels=min_image_pixels
+    )
+    return full_text or ""
+
+
+def pdf_to_ocr_text(
+    pdf_path: str,
+    dpi_scale: float = 2.0,
+    lang: Optional[List[str]] = None,
+) -> str:
+    """
+    PDF 각 페이지를 이미지로 렌더링한 뒤 OCR로 텍스트 추출.
+    비교 실험용: PyMuPDF 텍스트만 / OCR / 텍스트+VLM 중 OCR 베이스라인.
+    easyocr 사용 (한국어·영어). 미설치 시 빈 문자열 반환.
+    """
+    try:
+        import easyocr
+        import numpy as np
+    except ImportError:
+        return ""
+
+    if lang is None:
+        lang = ["ko", "en"]
+
+    doc = fitz.open(pdf_path)
+    parts: List[str] = []
+    try:
+        reader = easyocr.Reader(lang, gpu=False, verbose=False)
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            mat = fitz.Matrix(dpi_scale, dpi_scale)
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(
+                pix.height, pix.width, pix.n
+            )
+            result = reader.readtext(img)
+            page_text = " ".join(t[1] for t in result if t[1].strip())
+            if page_text.strip():
+                parts.append(page_text.strip())
+    finally:
+        doc.close()
+
+    return "\n\n".join(parts) if parts else ""
+
+
+def pdf_to_text_plus_ocr(
+    pdf_path: str,
+    dpi_scale: float = 2.0,
+    lang: Optional[List[str]] = None,
+) -> str:
+    """
+    페이지별로 PyMuPDF 텍스트 + 해당 페이지 이미지 OCR 텍스트를 합쳐 반환.
+    텍스트+그림(OCR) 베이스라인: 내장 텍스트와 OCR로 읽은 전체 페이지 내용을 함께 사용.
+    """
+    try:
+        import easyocr
+        import numpy as np
+    except ImportError:
+        return pdf_to_text_only(pdf_path)
+
+    if lang is None:
+        lang = ["ko", "en"]
+
+    doc = fitz.open(pdf_path)
+    page_parts: List[str] = []
+    try:
+        reader = easyocr.Reader(lang, gpu=False, verbose=False)
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            page_text = (page.get_text() or "").strip()
+            mat = fitz.Matrix(dpi_scale, dpi_scale)
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(
+                pix.height, pix.width, pix.n
+            )
+            result = reader.readtext(img)
+            ocr_text = " ".join(t[1] for t in result if t[1].strip()).strip()
+            if page_text and ocr_text:
+                page_parts.append(page_text + "\n\n[OCR]\n\n" + ocr_text)
+            elif page_text:
+                page_parts.append(page_text)
+            elif ocr_text:
+                page_parts.append(ocr_text)
+    finally:
+        doc.close()
+
+    return "\n\n".join(page_parts) if page_parts else ""
